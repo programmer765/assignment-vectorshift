@@ -1,0 +1,79 @@
+# ==========================
+# Global ignores
+# ==========================
+.DS_Store
+Thumbs.db
+*.log
+*.env
+.env.*
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ==========================
+# Backend (Python)
+# ==========================
+# Virtual environments
+backend/venv/
+backend/.venv/
+backend/env/
+backend/.env/
+
+# Byte-compiled / optimized / DLL files
+backend/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+
+# Build directories
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.coverage
+backend/htmlcov/
+backend/.tox/
+backend/.cache/
+
+# SQLite databases or similar local data
+backend/*.sqlite3
+backend/*.db
+
+# IDE/editor settings
+backend/.idea/
+backend/.vscode/
+
+# ==========================
+# Frontend (React)
+# ==========================
+# Node modules
+frontend/node_modules/
+
+# Build output
+frontend/build/
+frontend/dist/
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# Environment files
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# IDE/editor settings
+frontend/.idea/
+frontend/.vscode/
+
+# Misc cache
+frontend/.parcel-cache/
+frontend/.next/
+frontend/.turbo/
+frontend/.eslintcache
+frontend/.stylelintcache

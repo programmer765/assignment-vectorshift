@@ -1,0 +1,1 @@
+A technical assignment for connecting third party apps like notion, hubspot and airtable to connect to the frontend and retrieve data
