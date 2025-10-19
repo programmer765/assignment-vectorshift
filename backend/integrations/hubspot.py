@@ -16,7 +16,8 @@ APP_ID = os.getenv('HUBSPOT_APP_ID')
 CLIENT_ID = os.getenv('HUBSPOT_CLIENT_ID')
 CLIENT_SECRET = os.getenv('HUBSPOT_CLIENT_SECRET')
 REDIRECT_URI = 'http://localhost:8000/integrations/hubspot/oauth2callback'
-authorization_url = f'https://app-na2.hubspot.com/oauth/authorize?client_id={CLIENT_ID}&response_type=code&owner=user&scope=oauth%20crm.lists.read&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Fintegrations%2Fhubspot%2Foauth2callback'
+authorization_url = f'https://app-na2.hubspot.com/oauth/authorize?client_id={CLIENT_ID}&response_type=code&owner=user&scope=oauth%20crm.objects.contacts.read%20crm.objects.contacts.write&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Fintegrations%2Fhubspot%2Foauth2callback'
+
 
 async def authorize_hubspot(user_id, org_id):
     state_data = {
@@ -46,8 +47,6 @@ async def oauth2callback_hubspot(request: Request):
     
     saved_state_obj = json.loads(saved_state_json)
     saved_state = saved_state_obj.get('state')
-    print("Original State:", original_state)
-    print("Saved State:", saved_state)
     
     if not saved_state or saved_state != original_state:
         raise HTTPException(status_code=400, detail='State does not match.')
@@ -69,6 +68,7 @@ async def oauth2callback_hubspot(request: Request):
             delete_key_redis(f'hubspot_state:{org_id}:{user_id}')
         )
     response_data = response.json()
+    # print("HubSpot Token Response:", response_data)
     # if response.status_code != 200:
     #     raise HTTPException(status_code=400, detail=response_data.get('error_description'))
 
@@ -97,15 +97,67 @@ async def get_hubspot_credentials(user_id, org_id):
     return credentials
 
 # def recurs
+def _recursive_dict_search(data, target_key):
+    """Recursively search for a key in a dictionary of dictionaries."""
+    if target_key in data:
+        return data[target_key]
 
-async def create_integration_item_metadata_object(
+    for value in data.values():
+        if isinstance(value, dict):
+            result = _recursive_dict_search(value, target_key)
+            if result is not None:
+                return result
+        elif isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict):
+                    result = _recursive_dict_search(item, target_key)
+                    if result is not None:
+                        return result
+    return None
+
+def create_integration_item_metadata_object(
     response_json_str: str
 ):
-    response_data=json.loads(json.dumps(response_json_str))
-    
+    """Creates an integration metadata object from the response"""
+    response_json=json.loads(json.dumps(response_json_str))
+    name = _recursive_dict_search(response_json['properties'], 'firstname') or "No Name"
+    creation_time = _recursive_dict_search(response_json, 'createdAt')
+    last_modified_time = _recursive_dict_search(response_json, 'updatedAt')
+    integration_item_metadata = IntegrationItem(
+        id=response_json['id'],
+        type='contact',
+        name=name,
+        creation_time=creation_time,
+        last_modified_time=last_modified_time,
+        visibility=response_json['archived']
+    )
 
-    # return integration_item_metadata
+    return integration_item_metadata
 
 async def get_items_hubspot(credentials):
     """Aggregate all metadata relevant for a HubSpot data fetching logic here"""
-    pass
+    credentials = json.loads(credentials)
+    access_token = credentials.get('access_token')
+    if not access_token:
+        raise HTTPException(status_code=400, detail='Invalid HubSpot credentials.')
+
+    response = requests.get(
+        'https://api.hubapi.com/crm/v3/objects/contacts',
+        headers={
+            'Authorization': f'Bearer {access_token}'
+        }
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    
+    response_data = response.json()
+    # print("HubSpot Contacts Response Data:", response_data)
+    results = response_data.get('results', [])
+    list_of_integration_items = []
+    for result in results:
+        list_of_integration_items.append(
+            create_integration_item_metadata_object(result)
+        )
+    print(list_of_integration_items)
+    return list_of_integration_items
